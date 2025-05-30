@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Masa Yönetimi</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+
+        header {
+            background-color: #333;
+            color: #fff;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        header .title {
+            font-size: 24px;
+        }
+
+        header .back-btn {
+            text-decoration: none;
+            background-color: #007BFF;
+            color: #fff;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        header .back-btn:hover {
+            background-color: #0056b3;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 30px auto;
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .form-section {
+            margin-bottom: 30px;
+        }
+
+        .form-section input {
+            width: calc(100% - 100px);
+            padding: 10px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .form-section button {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .form-section button:hover {
+            background-color: #218838;
+        }
+
+        .table-container {
+            margin-top: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table th, table td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+
+        table th {
+            background-color: #f4f4f9;
+        }
+
+        .action-btn {
+            padding: 8px 12px;
+            margin: 2px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .edit-btn {
+            background-color: #ffc107;
+            color: #fff;
+        }
+
+        .edit-btn:hover {
+            background-color: #e0a800;
+        }
+
+        .delete-btn {
+            background-color: #e74c3c;
+            color: #fff;
+        }
+
+        .delete-btn:hover {
+            background-color: #c0392b;
+        }
+
+        .qr-btn {
+            background-color: #17a2b8;
+            color: #fff;
+        }
+
+        .qr-btn:hover {
+            background-color: #138496;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <a href="/admin/mainPage" class="back-btn">← Ana Sayfa</a>
+    <div class="title">Masa Yönetimi</div>
+</header>
+
+<div class="container">
+    <h1>Masa Yönetimi</h1>
+
+    <!-- Masa Ekleme Bölümü -->
+    <div class="form-section">
+        <h2>Masa Ekle</h2>
+        <form action="/admin/table/add" method="POST">
+            <input type="text" name="name" placeholder="Masa Adı" required>
+            <button type="submit">Ekle</button>
+        </form>
+    </div>
+
+    <!-- Masa Listesi -->
+    <div class="table-container">
+        <h2>Masalar</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Masa Adı</th>
+                    <th>QR Kod</th>
+                    <th>İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% masalar.forEach(function(masa) { %>
+                    <tr>
+                        <td><%= masa.id %></td>
+                        <td><%= masa.name %></td>
+                        <td>
+                            <img src="/admin/table/<%= masa.id %>" alt="<%= masa.name %>">
+                        </td>
+                        <td>
+                            <form action="/admin/table/delete/<%= masa.id %>" method="POST" style="display:inline;">
+                                <button type="submit" class="action-btn delete-btn">Sil</button>
+                            </form>
+                        </td>
+                    </tr>
+                <% }); %>
+            </tbody>
+        </table>
+        
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mutfak Orders</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #333;
+            color: #fff;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        header .title {
+            font-size: 24px;
+        }
+
+        header .back-btn {
+            text-decoration: none;
+            background-color: #007BFF;
+            color: #fff;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        header .back-btn:hover {
+            background-color: #0056b3;
+        }
+
+        main {
+            padding: 20px;
+        }
+
+        .filter-container {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        select,
+        button {
+            padding: 10px;
+            font-size: 16px;
+        }
+
+        .orders-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .orders-table th,
+        .orders-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .orders-table th {
+            background-color: #f4f4f4;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="title">Siparişler</div>
+    </header>
+    <main>
+        <!-- Sipariş Tablosu -->
+        <table class="orders-table">
+            <thead>
+                <tr>
+                    <th>Sipariş ID</th>
+                    <th>Masa Adı</th>
+                    <th>Sipariş Tarihi</th>
+                    <th>Ürünler</th>
+                    <th>Tutar</th>
+                    <th>Durum</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% if (orders.length> 0) { %>
+                    <% orders.forEach(function(order) { %>
+                        <tr>
+                            <td>
+                                <%= order.id %>
+                            </td>
+                            <td>
+                                <%= order.table_id %>
+                            </td>
+                            <td>
+                                <%= new Date(order.date).toLocaleString() %>
+                            </td>
+                            <td>
+                                <% order.items.forEach(function(item) { %>
+                                    <p>
+                                        <%= item.quantity %>x <%= item.product %>
+                                    </p>
+                                    <% }); %>
+                            </td>
+                            <td>
+                                <%= order.total %>₺
+                            </td>
+                            <td>
+                                <%= order.status %>
+                                    <% if (order.status==='Hazırlanıyor..' ) { %>
+                                        <button onclick="updateStatus('<%= order.id %>')">Hazır Yap</button>
+                                        <% } else if (order.status==='Hazır' ) { %>
+                                            <button onclick="updateStatus('<%= order.id %>')">Teslim Edildi</button>
+                                            <% } else { %>
+                                                <p>
+                                                    <%= order.status %>
+                                                </p>
+                                                <% } %>
+                            </td>
+                        </tr>
+                        <% }); %>
+                            <% } %>
+            </tbody>
+        </table>
+    </main>
+
+    <audio id="notification-sound" src="/sounds/notification.mp3"></audio>
+
+    <script>
+        const pageType = 'mutfak';
+
+        const orderSocket = new WebSocket('ws://localhost:8080');
+
+        orderSocket.onopen = () => {
+            orderSocket.send(JSON.stringify({ type: 'set_page', page: pageType }));
+        };
+
+        orderSocket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+
+            if (data.type === 'new_order') {
+                addOrderToTable(data.order);
+                playNotificationSound();
+            }
+        };
+
+        function addOrderToTable(order) {
+            const rows = document.querySelectorAll('.orders-table tbody tr');
+            let rowFound = false;
+
+            rows.forEach((row) => {
+                if (row.children[0].textContent === String(order.id)) {
+                    rowFound = true;
+                }
+            });
+
+            if (!rowFound) {
+                const tableBody = document.querySelector('.orders-table tbody');
+                const row = document.createElement('tr');
+
+                row.innerHTML = `
+            <td>${order.id}</td>
+            <td>${order.table_id}</td>
+            <td>${new Date(order.date).toLocaleString()}</td>
+            <td>${order.items.map(item => `<p>${item.quantity}x ${item.product}</p>`).join('')}</td>
+            <td>${order.total}₺</td>
+            <td>
+                ${order.status}
+                ${order.status === 'Hazırlanıyor..'
+                        ? `<button onclick="updateStatus('${order.id}')">Hazır Yap</button>`
+                        : order.status === 'Hazır'
+                            ? `<button onclick="updateStatus('${order.id}')">Teslim Edildi</button>`
+                            : `<button onclick="updateStatus('${order.id}')">Ödendi</button>`
+                    }
+            </td>
+        `;
+
+                tableBody.appendChild(row);
+            }
+        }
+
+        function playNotificationSound() {
+            const audio = document.getElementById('notification-sound');
+            audio.play().catch(err => {
+                console.error('Ses çalma hatası:', err);
+            });
+        }
+    </script>
+
+    <script>
+        function updateStatus(orderId) {
+            fetch(`/mutfak/orders/${orderId}/status`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: (JSON.stringify({
+                    status: 'Hazır',
+                    date: new Date().toISOString(),
+                }))
+            })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        alert('Bir hata oluştu');
+                    }
+                })
+                .catch(error => {
+                    console.error('Hata:', error);
+                    alert('Sunucuya bağlanırken bir hata oluştu');
+                });
+        }
+    </script>
+</body>
+
+</html>

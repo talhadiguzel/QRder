@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Reports</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #333;
+            color: #fff;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        header .title {
+            font-size: 24px;
+        }
+
+        header .back-btn {
+            text-decoration: none;
+            background-color: #007BFF;
+            color: #fff;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        header .back-btn:hover {
+            background-color: #0056b3;
+        }
+        main {
+            padding: 20px;
+        }
+        .filter-container {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        select, button {
+            padding: 10px;
+            font-size: 16px;
+        }
+        .orders-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .orders-table th, .orders-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        .orders-table th {
+            background-color: #f4f4f4;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="/admin/mainPage" class="back-btn">← Ana Sayfa</a>
+        <div class="title">Sipariş Raporları</div>
+    </header>
+    <main>
+        <!-- Masa Seçimi ve Filtreleme -->
+        <div class="filter-container">
+            <form method="get" action="/admin/report">
+                <label for="tableName">Masa Seç:</label>
+                <select name="tableName" id="tableName">
+                    <option value="">Tüm Masalar</option>
+                    <% tables.forEach(function(table) { %>
+                        <option value="<%= table.name %>" <%= selectedTable === table.name ? 'selected' : '' %>>
+                            <%= table.name %>
+                        </option>
+                    <% }); %>
+                </select>
+
+                <label for="startDate">Başlangıç Tarihi:</label>
+                <input type="date" id="startDate" name="startDate" onchange="updateEndDate()">
+
+                <label for="endDate">Bitiş Tarihi:</label>
+                <input type="date" id="endDate" name="endDate">
+
+                <script>
+                function updateEndDate() {
+                    const startDate = document.getElementById('startDate').value;
+                    const endDateInput = document.getElementById('endDate');
+                
+                    if (startDate) {
+                        endDateInput.setAttribute('min', startDate);
+                    }
+                }</script>
+
+                <button type="submit">Filtrele</button>
+            </form>
+        </div>
+
+        <!-- Sipariş Tablosu -->
+        <table class="orders-table">
+            <thead>
+                <tr>
+                    <th>Sipariş ID</th>
+                    <th>Masa Adı</th>
+                    <th>Sipariş Tarihi</th>
+                    <th>Ürünler</th>
+                    <th>Tutar</th>
+                    <th>Durum</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% if (orders.length > 0) { %>
+                    <% orders.forEach(function(order) { %>
+                        <tr>
+                            <td><%= order.id %></td>
+                            <td><%= order.table_id %></td>
+                            <td><%= new Date(order.date).toLocaleString() %></td>
+                            <td><% order.items.forEach(function(item) { %>
+                                <p><%= item.quantity %>x <%= item.product %></p>
+                            <% }); %></td>
+                            <td><%= order.total %>₺</td>
+                            <td><%= order.status %></td>
+                        </tr>
+                    <% }); %>
+                <% } else { %>
+                    <tr>
+                        <td colspan="5">Sipariş bulunamadı.</td>
+                    </tr>
+                <% } %>
+            </tbody>
+        </table>
+    </main>
+</body>
+</html>

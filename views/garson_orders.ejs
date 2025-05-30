@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Garson Orders</title>
+    <link rel="stylesheet" href="/styles/garson.css">
+</head>
+
+<body>
+    <nav>
+        <div class="title">Masalar</div>
+        <div id="cagri_container">
+        </div>
+    </nav>
+    <main>
+        <table class="orders-table">
+            <thead>
+                <tr>
+                    <th>Sipariş ID</th>
+                    <th>Masa Adı</th>
+                    <th>Sipariş Tarihi</th>
+                    <th>Ürünler</th>
+                    <th>Tutar</th>
+                    <th>Durum</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% if (orders.length> 0) { %>
+                    <% orders.forEach(function(order) { %>
+                        <tr>
+                            <td>
+                                <%= order.id %>
+                            </td>
+                            <td>
+                                <%= order.table_id %>
+                            </td>
+                            <td>
+                                <%= new Date(order.date).toLocaleString() %>
+                            </td>
+                            <td>
+                                <% order.items.forEach(function(item) { %>
+                                    <p>
+                                        <%= item.quantity %>x <%= item.product %>
+                                    </p>
+                                    <% }); %>
+                            </td>
+                            <td>
+                                <%= order.total %>₺
+                            </td>
+                            <td>
+                                <%= order.status %>
+                                    <% if (order.status==='Hazırlanıyor..' ) { %>
+                                        <button onclick="updateStatus('<%= order.id %>')">Hazır Yap</button>
+                                        <% } else if (order.status==='Hazır' ) { %>
+                                            <button onclick="updateStatus('<%= order.id %>')">Teslim Edildi</button>
+                                            <% } else { %>
+                                                <p>
+                                                    <%= order.status %>
+                                                </p>
+                                                <% } %>
+                            </td>
+                        </tr>
+                        <% }); %>
+                            <% } %>
+            </tbody>
+        </table>
+    </main>
+
+    <audio id="notification-sound" src="/sounds/notification.mp3"></audio>
+
+    <script>
+        const pageType = 'garson';
+        const orderSocket = new WebSocket('ws://localhost:8080');
+
+        orderSocket.onopen = () => {
+            orderSocket.send(JSON.stringify({ type: 'set_page', page: pageType }));
+        };
+
+        orderSocket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'update_order') {
+                addOrderToTable(data.order);
+                playNotificationSound();
+            }
+        };
+
+        function addOrderToTable(order) {
+            const rows = document.querySelectorAll('.orders-table tbody tr');
+            let rowFound = false;
+
+            rows.forEach((row) => {
+                if (row.children[0].textContent === String(order.id)) {
+                    rowFound = true;
+                }
+            });
+
+            if (!rowFound) {
+                const tableBody = document.querySelector('.orders-table tbody');
+                const row = document.createElement('tr');
+
+                row.innerHTML = `
+            <td>${order.id}</td>
+            <td>${order.table_id}</td>
+            <td>${new Date(order.date).toLocaleString()}</td>
+            <td>${order.items.map(item => `<p>${item.quantity}x ${item.product}</p>`).join('')}</td>
+            <td>${order.total}₺</td>
+            <td>
+                ${order.status}
+                ${order.status === 'Hazırlanıyor..'
+                        ? `<button onclick="updateStatus('${order.id}')">Hazır Yap</button>`
+                        : order.status === 'Hazır'
+                            ? `<button onclick="updateStatus('${order.id}')">Teslim Edildi</button>`
+                            : `<button onclick="updateStatus('${order.id}')">Ödendi</button>`
+                    }
+            </td>
+        `;
+
+                tableBody.appendChild(row);
+            }
+        }
+
+        function playNotificationSound() {
+            const audio = document.getElementById('notification-sound');
+            audio.play().catch(err => {
+                console.error('Ses çalma hatası:', err);
+            });
+        }
+    </script>
+
+
+    <script>
+        const callSocket = new WebSocket('ws://localhost:8081');
+        const activeCalls = {};
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const savedCalls = JSON.parse(localStorage.getItem("active_calls")) || {};
+            for (const masaid in savedCalls) {
+                showButton(masaid);
+            }
+        });
+
+        callSocket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            const { action, masaid } = data;
+
+            if (action === 'show') {
+                if (!activeCalls[masaid]) {
+                    activeCalls[masaid] = true;
+                    localStorage.setItem("active_calls", JSON.stringify(activeCalls));
+                    showButton(masaid);
+                    playNotificationSound();
+                }
+            } else if (action === 'hide') {
+                if (activeCalls[masaid]) {
+                    delete activeCalls[masaid];
+                    localStorage.setItem("active_calls", JSON.stringify(activeCalls));
+                    hideButton(masaid);
+                }
+            }
+        };
+
+        function showButton(masaid) {
+            const container = document.getElementById('cagri_container');
+            if (document.getElementById(`button_${masaid}`)) return;
+            const button = document.createElement('button');
+            button.id = `button_${masaid}`;
+            button.textContent = `${masaid}`;
+            button.onclick = () => cagriKapa(masaid);
+            container.appendChild(button);
+        }
+
+        function hideButton(masaid) {
+            const button = document.getElementById(`button_${masaid}`);
+            if (button) {
+                button.remove();
+            }
+        }
+
+        function cagriKapa(masaid) {
+            hideButton(masaid);
+            delete activeCalls[masaid];
+            localStorage.setItem("active_calls", JSON.stringify(activeCalls));
+
+            callSocket.send(JSON.stringify({ action: 'hide', masaid }));
+        }
+
+
+        function updateStatus(orderId) {
+            fetch(`/garson/orders/${orderId}/status`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: (JSON.stringify({
+                    status: 'Teslim Edildi',
+                    date: new Date().toISOString(),
+                }))
+            })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        alert('Bir hata oluştu');
+                    }
+                })
+                .catch(error => {
+                    console.error('Hata:', error);
+                    alert('Sunucuya bağlanırken bir hata oluştu');
+                });
+        }
+    </script>
+</body>
+
+</html>

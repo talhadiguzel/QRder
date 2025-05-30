@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu-Kontrol</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #333;
+            color: #fff;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        header .title {
+            font-size: 24px;
+        }
+
+        header .back-btn {
+            text-decoration: none;
+            background-color: #007BFF;
+            color: #fff;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        header .back-btn:hover {
+            background-color: #0056b3;
+        }
+
+        .menu {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        li:last-child {
+            border-bottom: none;
+        }
+
+        button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 8px 12px;
+            margin-left: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button.delete {
+            background-color: #dc3545;
+        }
+
+        button.delete:hover {
+            background-color: #c82333;
+        }
+
+        .form-container {
+            display: none;
+            max-width: 400px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-container h3 {
+            margin-top: 0;
+        }
+
+        label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0 15px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+
+        .form-container button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 1em;
+        }
+
+        .add-button {
+            display: block;
+            max-width: 200px;
+            margin: 20px auto;
+            padding: 10px;
+            background-color: #28a745;
+        }
+
+        .add-button:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <a href="/admin/mainPage" class="back-btn">← Ana Sayfa</a>
+        <div class="title">Menü Yönetimi</div>
+    </header>
+
+    <div class="menu">
+        <ul>
+            <% for (let index=0; index < menu.length; index++) { %>
+                <li>
+                    <% const element=menu[index]; %>
+                        <img src="<%= element.image_path %>" alt="<%= element.name %>"
+                            style="width: 100px; height: auto;">
+                        <span>
+                            <%= element.name %> - <%= element.price %>₺
+                        </span>
+                        <span><%= element.category %></span>
+                        <span><%= element.description %></span>
+                        <span>
+                            <button onclick="showUpdateForm('<%= element.urun_id %>', '<%= element.name %>', '<%= element.price %>', '<%= element.category %>', '<%= element.description %>')">Güncelle</button>
+                            <button class="delete" onclick="deleteItem('<%= element.urun_id %>')">Sil</button>
+                        </span>
+                </li>
+                <% } %>
+        </ul>
+    </div>
+
+    <button class="add-button" onclick="showAddProductForm()">Ürün Ekle</button>
+
+    <button onclick="window.location.href='/admin/logout'"
+        style="display: block; margin: 20px auto; padding: 10px; background-color: #dc3545; color: #fff; border: none; border-radius: 4px; cursor: pointer;">Çıkış
+        Yap</button>
+
+    <div id="add-product-form" class="form-container">
+        <h3>Yeni Ürün Ekle</h3>
+        <form id="product-form" enctype="multipart/form-data" method="POST" action="/admin/menu-kontrol/add">
+            <label>Ürün Adı:</label>
+            <input type="text" name="name" id="new-product-name" required>
+
+            <label>Kategori:</label>
+            <input type="text" name="category" id="new-product-category" required>
+
+            <label>Açıklama:</label>
+            <textarea name="description" id="new-product-description" rows="4" required></textarea>
+
+            <label>Ürün Fiyatı:</label>
+            <input type="number" name="price" id="new-product-price" required>
+
+            <label>Fotoğraf:</label>
+            <input type="file" name="image" id="new-product-image" accept="image/*" required>
+
+            <button type="submit">Ekle</button>
+            <button type="button" onclick="hideAddProductForm()">İptal</button>
+        </form>
+    </div>
+
+    <!-- Ürün Güncelleme Formu -->
+    <div id="update-product-form" class="form-container">
+        <h3>Ürünü Güncelle</h3>
+        <label>Ürün Adı:</label>
+        <input type="text" id="update-product-name">
+        <label>Ürün Fiyatı:</label>
+        <input type="number" id="update-product-price">
+        <label>Kategori:</label>
+        <input type="text" id="update-product-category">
+        <label>Açıklama:</label>
+        <textarea id="update-product-description" rows="4"></textarea>
+        <button onclick="updateProduct()">Güncelle</button>
+        <button onclick="hideUpdateForm()">İptal</button>
+    </div>
+
+    <script>
+        let updatingItemId = null;
+
+        function showAddProductForm() {
+            document.getElementById('add-product-form').style.display = 'block';
+        }
+
+        function hideAddProductForm() {
+            document.getElementById('add-product-form').style.display = 'none';
+        }
+
+        function showUpdateForm(itemId, currentName, currentPrice, currentCategory, currentDescription) {
+            updatingItemId = itemId;
+            document.getElementById('update-product-name').value = currentName;
+            document.getElementById('update-product-price').value = currentPrice;
+            document.getElementById('update-product-category').value = currentCategory;
+            document.getElementById('update-product-description').value = currentDescription;
+            document.getElementById('update-product-form').style.display = 'block';
+        }
+
+
+        function hideUpdateForm() {
+            updatingItemId = null;
+            document.getElementById('update-product-form').style.display = 'none';
+        }
+
+        function updateProduct() {
+            const newName = document.getElementById('update-product-name').value;
+            const newPrice = document.getElementById('update-product-price').value;
+            const newCategory = document.getElementById('update-product-category').value;
+            const newDescription = document.getElementById('update-product-description').value;
+
+            if (newName && newPrice && newCategory && newDescription && !isNaN(newPrice)) {
+                fetch(`/admin/menu-kontrol/update/${updatingItemId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name: newName, price: newPrice, category: newCategory, description: newDescription })
+                })
+                    .then(() => window.location.href = '/admin/menu-kontrol')
+                    .catch(error => console.error("Hata:", error));
+            } else {
+                alert("Lütfen tüm alanları doldurun!");
+            }
+        }
+
+        function deleteItem(itemId) {
+            if (confirm("Bu öğeyi silmek istediğinizden emin misiniz?")) {
+                fetch(`/admin/menu-kontrol/delete/${itemId}`, {
+                    method: 'DELETE'
+                })
+                    .then(data => {
+                        window.location.href = '/admin/menu-kontrol';
+                    })
+                    .catch(error => console.error("Hata:", error));
+            }
+        }
+    </script>
+</body>
+
+</html>

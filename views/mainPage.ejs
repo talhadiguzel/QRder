@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Paneli</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+
+        header {
+            background-color: #333;
+            color: #fff;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        header .title {
+            font-size: 24px;
+        }
+
+        header .logout-btn {
+            text-decoration: none;
+            background-color: #e74c3c;
+            color: #fff;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        header .logout-btn:hover {
+            background-color: #c0392b;
+        }
+
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            margin: 30px auto;
+            max-width: 1000px;
+        }
+
+        .card {
+            width: 300px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin: 15px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .card h2 {
+            font-size: 20px;
+            margin: 20px 0;
+        }
+
+        .card a {
+            display: inline-block;
+            text-decoration: none;
+            background-color: #007BFF;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+        .card a:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="title">Admin Paneli</div>
+    <a href="/admin/logout" class="logout-btn">Çıkış Yap</a>
+</header>
+
+<div class="container">
+    <!-- Ürün Yönetimi -->
+    <div class="card">
+        <h2>Ürün Yönetimi</h2>
+        <p>Ürünleri ekleyin, düzenleyin veya silin.</p>
+        <a href="/admin/menu-kontrol">Sayfaya Git</a>
+    </div>
+
+    <!-- Masa Yönetimi -->
+    <div class="card">
+        <h2>Masa Yönetimi</h2>
+        <p>Masaları düzenleyin ve yönetin.</p>
+        <a href="/admin/table">Sayfaya Git</a>
+    </div>
+
+    <!-- Raporlar -->
+    <div class="card">
+        <h2>Raporlar</h2>
+        <p>Günlük, haftalık ve aylık raporları görüntüleyin.</p>
+        <a href="/admin/report">Sayfaya Git</a>
+    </div>
+</div>
+
+</body>
+</html>

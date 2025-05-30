@@ -1,0 +1,249 @@
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menü</title>
+    <link rel="stylesheet" href="/styles/menu.css">
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="logo">
+            <a href="/">Cay Saati</a>
+        </div>
+        <div class="list">
+            <a href="/orders" class="link">Siparişler</a>
+            <a href="/reports" class="link">Raporlar</a>
+        </div>
+        <div class="grsn_cgr">
+            <button onclick="sendAlert()">Garson Çağır</button>
+        </div>
+    </nav>
+    <div class="container">
+        <!-- Kategoriler -->
+        <div class="categories">
+            <% categories.forEach(category=> { %>
+                <button class="category-btn <%= category === firstCategory ? 'active' : '' %>"
+                    onclick="showCategory('<%= category %>')">
+                    <%= category %>
+                </button>
+                <% }); %>
+        </div>
+
+        <div class="menu">
+            <!-- Menü Öğeleri -->
+            <ul id="menuList" class="menu-list">
+                <% menu[firstCategory].sort((a, b)=> a.name.localeCompare(b.name)).forEach(item => { %>
+                    <li class="menu-item" data-category="<%= firstCategory %>"
+                        onclick="addToOrder('<%= item.name %>', '<%= item.price %>')">
+                        <img src="<%= item.image_path %>" alt="<%= item.name %>" style="width: 100px; height: auto;">
+                        <span>
+                            <span class="title">
+                                <%= item.name %>
+                            </span> - <%= item.price %>₺
+                        </span>
+                        <span>
+                            <%= item.description %>
+                        </span>
+                        <button onclick="addToOrder('<%= item.name %>', '<%= item.price %>')">+</button>
+                    </li>
+                    <% }); %>
+            </ul>
+        </div>
+
+
+        <div class="order">
+            <h3>Siparişiniz:</h3>
+            <ul id="order-list"></ul>
+            <div class="amount">
+                <p>Toplam Tutar:</p>
+                <span id="total-amount">0₺</span>
+            </div>
+            <button id="place-order-btn">Siparişi Ver</button>
+        </div>
+
+        <div class="order-history">
+            <h3>Geçmiş Siparişler:</h3>
+            <ul id="order-history-list"></ul>
+            <div class="history-amount">
+                <p>Toplam Tutar:</p>
+                <span id="final-total-amount">0₺</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+        const callSocket = new WebSocket('ws://localhost:8081');
+
+        callSocket.onopen = () => {
+            console.log('Call socket connected.');
+        };
+
+        callSocket.onerror = (error) => {
+            console.error('WebSocket Error:', error);
+        };
+
+        function sendAlert() {
+            if (callSocket.readyState === WebSocket.OPEN) {
+                const message = {
+                    action: 'show',
+                    masaid: `${masaid}`
+                };
+                callSocket.send(JSON.stringify(message));
+            } else {
+                console.error('WebSocket bağlantısı açık değil.');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchOrderHistory();
+        });
+
+        function fetchOrderHistory() {
+            fetch(`/orders/history/${masaid}`)
+                .then(response => response.json())
+                .then(orders => {
+                    const orderHistoryList = document.getElementById('order-history-list');
+                    orderHistoryList.innerHTML = '';
+
+                    if (orders.length === 0) {
+                        orderHistoryList.innerHTML = '<li>Henüz sipariş yok.</li>';
+                        return;
+                    }
+
+                    orders.forEach(order => {
+                        const li = document.createElement('li');
+                        const items = order.items.map(item =>
+                            `${item.quantity}x ${item.product}`
+                        ).join(',<br>');
+                        li.innerHTML =
+                            `<strong>${new Date(order.date).toLocaleTimeString(navigator.language, { hour: '2-digit', minute: '2-digit' })}</strong> -<span> ${items}</span> -
+                                <span>${order.total}₺</span> - <span><em>${order.status}</em></span>`
+                            ;
+                        orderHistoryList.appendChild(li);
+                        finalAmount += parseFloat(order.total);
+                        document.getElementById('final-total-amount').textContent = `${finalAmount}₺`;
+                    });
+                })
+                .catch(err => console.error('Sipariş geçmişi alınırken hata oluştu:', err));
+        };
+    </script>
+
+    <script>
+        function showCategory(category) {
+            const menuList = document.getElementById("menuList");
+            const menuItems = document.querySelectorAll(".menu-item");
+            const categoryButtons = document.querySelectorAll(".category-btn");
+
+            categoryButtons.forEach(btn => {
+                btn.classList.toggle('active', btn.textContent.trim() === category);
+            });
+
+            fetch(`/menu-data/${category}`)
+                .then(response => response.json())
+                .then(items => {
+                    items.sort((a, b) => a.name.localeCompare(b.name));
+
+                    menuList.innerHTML = items.map(item => `
+            <li class="menu-item" onclick="addToOrder('${item.name}', '${item.price}')">
+                <img src="${item.image_path}" alt="${item.name}" style="width: 100px; height: auto;">
+                <span><span class="title">${item.name}</span> - ${item.price}₺</span>
+                <span>${item.description}</span>
+                <button onclick="addToOrder('${item.name}', '${item.price}')">+</button>
+            </li>
+        `).join('');
+                });
+        }
+    </script>
+
+    <script>
+        let order = [];
+        let totalAmount = 0;
+        let finalAmount = 0;
+        const masaid = '<%= masaid %>';
+
+        function addToOrder(product, price) {
+            const existingItem = order.find(item => item.product === product);
+
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                order.push({ product, price, quantity: 1 });
+            }
+            updateOrderSummary();
+        }
+
+        function removeFromOrder(product) {
+            const existingItem = order.find(item => item.product === product);
+
+            if (existingItem) {
+                existingItem.quantity -= 1;
+                if (existingItem.quantity === 0) {
+                    order = order.filter(item => item.product !== product);
+                }
+                updateOrderSummary();
+            }
+        }
+
+        function updateOrderSummary() {
+            const orderList = document.getElementById('order-list');
+            orderList.innerHTML = '';
+            totalAmount = 0;
+
+            order.forEach(orderItem => {
+                const li = document.createElement('li');
+                li.textContent = `${orderItem.product} - ${orderItem.price}₺ x ${orderItem.quantity}`;
+
+                const buttonGroup = document.createElement('div');
+                buttonGroup.className = 'button-group';
+
+                const removeButton = document.createElement('button');
+                removeButton.textContent = '-';
+                removeButton.onclick = () => removeFromOrder(orderItem.product);
+                buttonGroup.appendChild(removeButton);
+
+                const addButton = document.createElement('button');
+                addButton.textContent = '+';
+                addButton.onclick = () => addToOrder(orderItem.product, orderItem.price);
+                buttonGroup.appendChild(addButton);
+
+                li.appendChild(buttonGroup);
+                orderList.appendChild(li);
+                totalAmount += orderItem.price * orderItem.quantity;
+            });
+
+            document.getElementById('total-amount').textContent = `${totalAmount}₺`;
+        }
+
+        document.getElementById('place-order-btn').addEventListener('click', () => {
+            if (order.length === 0) {
+                alert('Lütfen önce ürün seçin!');
+                return;
+            }
+
+            fetch('/orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    table_id: masaid,
+                    date: new Date().toISOString(),
+                    items: order,
+                    total: totalAmount,
+                    status: 'Hazırlanıyor..',
+                }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    alert('Siparişiniz alındı!');
+                    order = [];
+                    updateOrderSummary();
+                    window.location.reload();
+                })
+                .catch(err => console.error('Sipariş gönderim hatası:', err));
+        });
+    </script>
+</body>
+
+</html>
